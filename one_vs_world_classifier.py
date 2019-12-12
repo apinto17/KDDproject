@@ -11,35 +11,23 @@ from sklearn import datasets
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.calibration import CalibratedClassifierCV
 import json
-from data_explore import clean
+from data_explore import *
+from sklearn.metrics import accuracy_score
+from sklearn.ensemble import RandomForestClassifier
 
-
-# TODO try a random forrest or decision tree classifier
-# TODO get more data for a more clean train-test split
 
 def main():
-    svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
-    clf = CalibratedClassifierCV(svm)
-    vect = CountVectorizer(ngram_range=(1,2))
+    clf = RandomForestClassifier(max_depth=2, random_state=0)
+    vect = CountVectorizer()
     pipeline = Pipeline([
             ("vect", vect),
             ("clf", clf)
     ])
-    data_file = open("categories.json", "r+")
-    data = json.load(data_file)
+    train, test = train_test_split()
 
-    data = pd.DataFrame({'input_category' : data["input_categories"],
-                        'output_category' : data["output_categories"]})
+    y_pred = OneVsRestClassifier(pipeline).fit(train["cleaned"], train["output_category"]).predict(test['cleaned'])
 
-    data = clean(data)
-
-    train_indx = int((.7 * len(data)))
-
-    train = data[:train_indx]
-    test = data[train_indx:]
-    print(OneVsRestClassifier(pipeline).fit(train["cleaned"], train["output_category"]).predict(test['cleaned']))
-
-
+    print(accuracy_score(test['output_category'], y_pred))
     # x_train, x_test, y_train, y_test = train_test_split(data["input_category"], data["cleaned"], test_size=.3)
 
     # print(OneVsRestClassifier(pipeline).fit(x_train, y_train).predict(x_test))
