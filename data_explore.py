@@ -4,31 +4,21 @@ from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 import re
 import random
-from sklearn.datasets import make_classification
+
 
 NUM_PER_OUTPUT = 10
-NUM_OF_FEATURES = 10
+
 
 def main():
     train, test = train_test_split()
-    print(train)
+
 
 
 def get_data():
     data_file = open("categories.json", "r+")
     data = json.load(data_file)
 
-    input_categories = []
-    for i in range(len(data['input_categories'])):
-        input_data_point = data["input_categories"][i].split("|")
-        if(len(input_data_point) < NUM_OF_FEATURES):
-            for j in range(NUM_OF_FEATURES - len(input_data_point)):
-                input_data_point.append("")
-        elif(len(input_data_point) > NUM_OF_FEATURES):
-            raise ValueError("Increase NUM_OF_FEATURES")
-        input_categories.append(input_data_point)
-
-    data = pd.DataFrame({'input_category' : input_categories,
+    data = pd.DataFrame({'input_category' : data["input_categories"],
                         'output_category' : data["output_categories"]})
 
     data = clean(data)
@@ -116,10 +106,7 @@ def clean(data):
     for i in indexes:
         data = data.drop(i)
 
-    cleaned = []
-    for i in range(len(data["input_category"])):
-        cleaned.append([stemmer.stem(re.sub("[^a-zA-Z]", "", w)) for w in data["input_category"].iloc[i] if w not in words])
-    data["cleaned"] = cleaned
+    data["cleaned"] = data["input_category"].apply(lambda x: " ".join([stemmer.stem(i) for i in re.sub("[^a-zA-Z]", " ", x).split() if i not in words]).lower())
 
 
     return data

@@ -13,12 +13,14 @@ from sklearn.calibration import CalibratedClassifierCV
 import json
 from data_explore import *
 from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
 
+
+# TODO try a random forrest or decision tree classifier
 
 def main():
-    clf = RandomForestClassifier(max_depth=2, random_state=0)
-    vect = CountVectorizer()
+    svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
+    clf = CalibratedClassifierCV(svm)
+    vect = CountVectorizer(ngram_range=(1,2))
     pipeline = Pipeline([
             ("vect", vect),
             ("clf", clf)
