@@ -14,8 +14,7 @@ import json
 from data_explore import *
 from sklearn.metrics import accuracy_score
 
-
-# TODO try a random forrest or decision tree classifier
+# TODO find a way to use categorical data instead of treating it like text data
 
 def main():
     svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
@@ -30,9 +29,24 @@ def main():
     y_pred = OneVsRestClassifier(pipeline).fit(train["cleaned"], train["output_category"]).predict(test['cleaned'])
 
     print(accuracy_score(test['output_category'], y_pred))
-    # x_train, x_test, y_train, y_test = train_test_split(data["input_category"], data["cleaned"], test_size=.3)
 
-    # print(OneVsRestClassifier(pipeline).fit(x_train, y_train).predict(x_test))
+
+def train():
+    svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
+    clf = CalibratedClassifierCV(svm)
+    vect = CountVectorizer(ngram_range=(1,2))
+    pipeline = Pipeline([
+            ("vect", vect),
+            ("clf", clf)
+    ])
+    data = get_data()
+
+    return OneVsRestClassifier(pipeline).fit(data["cleaned"], data["output_category"])
+
+
+def classify(model, category):
+
+    return model.predict(category)
 
 
 
