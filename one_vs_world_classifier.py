@@ -13,6 +13,9 @@ from sklearn.calibration import CalibratedClassifierCV
 import json
 from data_explore import *
 from sklearn.metrics import accuracy_score
+import sshtunnel
+import mysql.connector
+
 
 # TODO find a way to use categorical data instead of treating it like text data
 
@@ -20,7 +23,7 @@ from sklearn.metrics import accuracy_score
 def main():
     server = Server()
     cats = {}
-    input_categories, output_categories = Select_Training_Data_From_DB()
+    input_categories, output_categories = server.Select_Training_Data_From_DB()
     cats["input_categories"] = input_categories
     cats["output_categories"] = output_categories
     cat_file = open("categories.json", "w+")
@@ -96,7 +99,8 @@ class Server:
 
 
     def __del__(self):
-        self.server.stop()
+        if(self.server is not None):
+            self.server.stop()
 
 
     def Select_Training_Data_From_DB(self):
