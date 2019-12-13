@@ -13,25 +13,14 @@ from sklearn.calibration import CalibratedClassifierCV
 import json
 from data_explore import *
 from sklearn.metrics import accuracy_score
-import sshtunnel
-import mysql.connector
+from sklearn.metrics import precision_recall_fscore_support
+# import sshtunnel
+# import mysql.connector
 
 
 # TODO find a way to use categorical data instead of treating it like text data
 
-
 def main():
-    server = Server()
-    cats = {}
-    input_categories, output_categories = server.Select_Training_Data_From_DB()
-    cats["input_categories"] = input_categories
-    cats["output_categories"] = output_categories
-    cat_file = open("categories.json", "w+")
-    json.dump(cats, cat_file)
-    del server
-
-
-def test():
     svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
     clf = CalibratedClassifierCV(svm)
     vect = CountVectorizer(ngram_range=(1,2))
@@ -43,7 +32,27 @@ def test():
 
     y_pred = OneVsRestClassifier(pipeline).fit(train["cleaned"], train["output_category"]).predict(test['cleaned'])
 
-    print(accuracy_score(test['output_category'], y_pred))
+    accur = accuracy_score(test['output_category'], y_pred)
+    prec, recall, f1, support = precision_recall_fscore_support(test['output_category'], y_pred, average='micro')
+
+    print("Accuracy: " + str(accur))
+    print("Precision: " + str(prec))
+    print("Recall: " + str(recall))
+    print("F1: " + str(f1))
+
+
+
+
+def select_training_data():
+    server = Server()
+    cats = {}
+    input_categories, output_categories = server.Select_Training_Data_From_DB()
+    cats["input_categories"] = input_categories
+    cats["output_categories"] = output_categories
+    cat_file = open("categories.json", "w+")
+    json.dump(cats, cat_file)
+    del server
+
 
 
 def train():
