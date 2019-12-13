@@ -14,13 +14,13 @@ def main():
     filename = sys.argv[1]
     dataset = pd.read_csv(filename)
     dataset = dataset.drop(['item_description'], axis = 'columns')
-    profession = ['EE', 'ME', 'CSC', 'CE', 'IE', 'CPE']
+#    profession = ['EE', 'ME', 'CSC', 'CE', 'IE', 'CPE']
     
 
     model = one_vs_world_classifier.train()
     new_values = []
-    for i in range(len(dataset)):
-        new_values.append(profession[random.randint(0,len(profession)-1)])
+#    for i in range(len(dataset)):
+#        new_values.append(profession[random.randint(0,len(profession)-1)])
 #        print(dataset['category'][i])
 
     print(dataset['category'].values)
@@ -28,7 +28,7 @@ def main():
 
 
     
-    dataset['user_type'] = new_values
+#    dataset['user_type'] = new_values
     dataset.to_csv('user_transaction.csv', index=False)
 
 
