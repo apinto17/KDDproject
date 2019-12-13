@@ -13,26 +13,32 @@ import one_vs_world_classifier
 def main():
     filename = sys.argv[1]
     dataset = pd.read_csv(filename)
-    dataset = dataset.drop(['item_description'], axis = 'columns')
-#    profession = ['EE', 'ME', 'CSC', 'CE', 'IE', 'CPE']
+    profession = ['EE', 'ME', 'CPE']
     
 
-    model = one_vs_world_classifier.train()
-    new_values = []
-#    for i in range(len(dataset)):
-#        new_values.append(profession[random.randint(0,len(profession)-1)])
-#        print(dataset['category'][i])
+    for i in range(len(dataset)):
+        if random.random() > 0.4:
+            if dataset['site_name'][i] == 'Tanner Bolt':
+                dataset.at[i, 'profession'] = 'ME'
+            elif dataset['site_name'][i] == 'dillonsupply.com':
+                dataset.at[i, 'profession'] = 'ME'
+            elif dataset['site_name'][i] == 'Automation Direct':
+                dataset.at[i, 'profession'] = 'CPE'
+            elif dataset['site_name'][i] == 'Bailiegh Industrial':
+                dataset.at[i, 'profession'] = 'EE'
+            elif dataset['site_name'][i] == 'Speedy Metals':
+                dataset.at[i, 'profession'] = 'ME'
+            elif dataset['site_name'][i] == 'QC Supply':
+                dataset.at[i, 'profession'] = 'CPE'
+            elif dataset['site_name'][i] == 'Blackhawk Industrial':
+                dataset.at[i, 'profession'] = 'EE'
+            else:
+                dataset.at[i, 'profession'] = 'other'
+                print("okaY")
+        else:
+            dataset.at[i, 'profession'] = profession[random.randint(0,2)]
 
-    print(dataset['category'].values)
-    dataset['category'] = one_vs_world_classifier.classify(model, dataset['category'].values)
-
-
-    
-#    dataset['user_type'] = new_values
-    dataset.to_csv('user_transaction.csv', index=False)
-
-
-
+    dataset.to_csv('user_transaction2.csv', index=False)
 
 if __name__ == "__main__":
     main()
