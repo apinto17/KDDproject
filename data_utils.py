@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import collections
 import math
+import matplotlib.pyplot as plt
 
 DATA_PATTERN = re.compile('''((?:[^,\"']|\"[^\"']*\"|['\"]*')+)''')
 
@@ -15,7 +16,7 @@ MIN_SITES = 2
 MAX_SITES = 4
 
 TRX_COLUMN_NAMES = 'uid,profession,pid,item_description,price,category,site_name'
-PROFESSIONS = ['EE', 'ME', 'CSC', 'CE', 'IE', 'CPE']
+PROFESSIONS = ['EE', 'ME', 'CPE']
 
 SITE_SEEDING = {
     'Speedy Metals' : { 'ME' : 0.4, 'CE' : 0.4 },
@@ -194,7 +195,7 @@ def get_items_by_sites(items : list, sites : frozenset):
 def get_trx_count_per_sites(trxs : list):
     sites_by_user = {}
     for t in trxs:
-        u_idx = t[0]
+        u_idx = t[0].id
         if u_idx not in sites_by_user.keys():
             sites_by_user[u_idx] = []
         sites_by_user[u_idx].append(t[1].site)
@@ -225,11 +226,13 @@ def read_trx_file(path='transactions.csv'):
 
     trxs = []
     for l in lines[1:]:
-        data = DATA_PATTERN.split(l.strip())[1::2]
+        data = l.strip().split(',')
         try:
             user_id = int(data[0])
-            id = int(data[1])
-            description = data[2]
+            profession = data[1]
+            id = int(data[2])
+            # description = data[3]
+            description = ''
             try:
                 price = float(re.sub('[^.0-9]', '', data[3]))
             except ValueError as e:
@@ -242,65 +245,57 @@ def read_trx_file(path='transactions.csv'):
             exit(0)
 
         item = Item(id, description, price, category, site)
-        trxs.append((user_id, item))
+        user = User(user_id, profession)
+        trxs.append((user, item))
 
     return trxs
 
-def build_utiliy_matrix(sites : list, sites_by_user : dict):
-    users = sites_by_user.keys()
-
-    u_matrix = pd.DataFrame(index=users, columns=sites)
-    for user in users:
-        u_sites = sites_by_user[user]
-        for site,count in u_sites.items():
-            # Using log-scale for user interaction to indicate positve, but less than linear
-            # correlation with user interaction.  Shifted +1 to remove negative values
-            u_matrix.at[user,site] = math.log2(1 + count)
-
-    # print(u_matrix)
-    return u_matrix
-
-# def read_utiliy_matrix(path='ratings.csv'):
-#     sites = read_sites_file()
-
-#     with open(path, 'r') as file:
-#         lines = file.readlines()
-
-#     u_matrix = pd.DataFrame(columns=sites)
-#     for l in lines():
+def plot_distribution(type : bool, transactions : list):
+    if type:
+        X = read_sites_file()
+        X_txt = 'Site'
+    else:
+        X = PROFESSIONS
+        X_txt = 'Profession'
 
 
-def write_utility_matrix(u_matrix : pd.DataFrame, path='ratings.csv'):
-    users = u_matrix.index
-    sites = u_matrix.columns
-    ratings = []
-    for u in range(len(users)):
-        for i in range(len(sites)):
-            r = u_matrix.iat[u,i]
-            if not np.isnan(r):
-                ratings.append('{},{},{}'.format(u, i,r))
+    counts_by_X = {x : 0 for x in X}
+    for t in transactions:
+        if type:
+            counts_by_X[t[1].site] += 1
+        else:
+            counts_by_X[t[0].profession] += 1
 
-    print(ratings)
-    with open(path, 'w') as output:
-        output.write('\n'.join(ratings))
+    if type:
+        counts = tuple([counts_by_X[site] for site in X])
+    else:
+        counts = tuple([counts_by_X[p] for p in X])
+
+    N = len(X)
+
+    ind = np.arange(N)    # the x locations for the groups
+    width = 0.35       # the width of the bars: can also be len(x) sequence
+
+    p1 = plt.bar(ind, counts, width)
+
+
+    plt.ylabel('Transactions')
+    plt.title('Transactions by {}'.format(X_txt))
+    plt.xticks(ind, tuple(X))
+    plt.yticks(np.arange(0, max(counts), max(counts) // 5))
+
+    plt.show()
 
 def main():
-    ## Used to create a utility matrix and write out a ratings list
-    # trxs = read_trx_file()
-    # sites = read_sites_file()
-    # sites_by_user = get_trx_count_per_sites(trxs)
-    # u_matrix = build_utiliy_matrix(sites, sites_by_user)
-    # write_utility_matrix(u_matrix)
 
     # create transactions
-    items, sites = read_item_data()
-    items_by_site = get_items_by_sites(items, sites)
-    trxs, site_ratios = create_transactions(10000, items_by_site)
-    breakpoint()
-    write_trxs(trxs)
+    # items, sites = read_item_data()
+    # items_by_site = get_items_by_sites(items, sites)
+    # trxs, site_ratios = create_transactions(10000, items_by_site)
+    trxs = read_trx_file('user_transaction2.csv')
 
-
-
+    plot_distribution(False, trxs)
+    # write_trxs(trxs)
 
 
 if __name__ == "__main__":
