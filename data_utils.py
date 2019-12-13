@@ -14,7 +14,27 @@ MAX_TRX = 25
 MIN_SITES = 2
 MAX_SITES = 4
 
-TRX_COLUMN_NAMES = 'uid,pid,item_description,price,category,site_name'
+TRX_COLUMN_NAMES = 'uid,profession,pid,item_description,price,category,site_name'
+PROFESSIONS = ['EE', 'ME', 'CSC', 'CE', 'IE', 'CPE']
+
+SITE_SEEDING = {
+    'Speedy Metals' : { 'ME' : 0.4, 'CE' : 0.4 },
+    'QC Supply' : { 'CPE' : 0.4, 'EE' : 0.4 },
+    'Tanner Bolt' : { 'ME' : 0.25, 'CE' : 0.25, 'IE' : 0.25 },
+    'Bailiegh Industrial' : {},
+    'dillonsupply.com' : {},
+    'Automation Direct' : { 'EE' : 0.25, 'CPE' : 0.25, 'ME' : 0.25 },
+    'Blackhawk Industrial' : {}
+}
+
+
+class User:
+    def __init__(self, id : int, profession : str):
+        self.id = id
+        self.profession = profession
+
+    def __repr__(self):
+        return ','.join([str(self.id), self.profession])
 
 class Item:
     def __init__(self,
@@ -32,7 +52,7 @@ class Item:
     def __repr__(self):
         return ','.join([str(self.id), self.description, str(self.price), self.category, self.site])
 
-def read_item_data(path : str):
+def read_item_data(path='item_data.csv'):
     ''' Data format - csv with colummns:
         - Item ID
         - Description
@@ -64,36 +84,103 @@ def read_item_data(path : str):
         items.append(item)
         sites.append(site)
 
+    sites_set = frozenset(sites)
     with open('sites.csv', 'w') as output:
-        output.write(','.join(frozenset(sites)))
+        output.write(','.join(sites_set))
 
-    return items, sites
+    return items, sites_set
 
 # Create k random transactions 
 def create_transactions(k : int, items_by_site : dict, uid_start=0):
     trxs = []
+    trx_counter = build_trx_counter()
 
     tot = 0
     u_counter = uid_start # In case you want to create a new set of users w/ transactions
     while tot < k:
-        user =  u_counter
-        print('----- User {} -----'.format(user))
+
         num_trans = random.randint(MIN_TRX, MAX_TRX)
         num_sites = random.randint(MIN_SITES,MAX_SITES)
 
         user_sites = random.sample(items_by_site.keys(), num_sites)
-        for _ in range(num_trans):
-            site = user_sites[random.randint(0, num_sites-1)]
-            site_items = items_by_site[site]
-            item = site_items[random.randint(0, len(site_items)-1)]
-            trxs.append((user,item))
+        u_id =  u_counter
+        profession = select_profession(trx_counter, user_sites)
+        user = User(u_id, profession)
 
+        for _ in range(num_trans):
+            item = select_item(profession, user_sites, items_by_site, trx_counter)
+            trxs.append((user,item))
 
         u_counter += 1
         tot += num_trans
-    return trxs
+    return trxs, trx_counter
 
-def get_items_by_sites(items : list, sites : list):
+def calc_ratios(trx_counter: dict):
+    for s in trx_counter.keys():
+        site_total = sum(trx_counter[s].values())
+        for p in trx_counter[s].keys():
+            trx_counter[s][p] /= site_total
+
+    print(trx_counter)
+
+def update_ratios(site, profession, site_ratios):
+    pass
+
+def build_trx_counter():
+    trx_counter = {}
+    for s in SITE_SEEDING.keys():
+        trx_counter[s] = {}
+        for p in PROFESSIONS:
+            trx_counter[s][p] = 0
+
+    return trx_counter
+
+# Selects a site below the given ratios
+def select_profession(trx_counter : dict, user_sites=[]):
+    profession = PROFESSIONS[random.randint(0, len(PROFESSIONS)-1)] # Random choice, will reassign if necessary
+    np.random.shuffle(user_sites)
+
+    for s in user_sites:
+        profs = SITE_SEEDING[s].keys()
+        site_total = sum(trx_counter[s].values())
+        for p in profs:
+            goal_ratio = SITE_SEEDING[s][p]
+
+            prof_total = trx_counter[s][p]
+            current_ratio =  prof_total / site_total if site_total > 0 else 0
+
+            if current_ratio < goal_ratio:
+                profession = p
+                break
+
+    return profession
+
+
+def select_item(profession : str, user_sites : list, items_by_site : dict, trx_counter : dict):
+    site = user_sites[random.randint(0, len(user_sites)-1)] # Random choice, will reassign if necessary
+    # for s,ratios_by_prof in SITE_SEEDING.items():
+
+    for s in user_sites:
+        site_total = sum(trx_counter[s].values())
+        prof_total = trx_counter[s][profession]
+
+        current_ratio =  prof_total / site_total if site_total > 0 else 0
+        
+        if profession in SITE_SEEDING[s].keys():
+            goal_ratio = SITE_SEEDING[s][profession]
+        else:
+            continue
+
+        if current_ratio < goal_ratio:
+            site = s
+            break
+
+    trx_counter[site][profession] += 1
+    site_items = items_by_site[site]
+    return site_items[random.randint(0, len(site_items)-1)]
+
+
+def get_items_by_sites(items : list, sites : frozenset):
     items_by_site = {}
     for s in sites:
         if s not in items_by_site.keys():
@@ -117,12 +204,12 @@ def get_trx_count_per_sites(trxs : list):
 def write_trxs(trxs : list, id_only=False):
     if not id_only:
         trx_strs = ['{},{}'.format(t[0], t[1]) for t in trxs]
-        filename = 'transactions.csv'
+        filename = 'transactions1.csv'
     else:
         trx_strs = ['{},{}'.format(t[0], t[1].id) for t in trxs]
         filename = 'trx_idx.csv'
 
-    trx_strs[::]= TRX_COLUMN_NAMES
+    trx_strs.insert(0,TRX_COLUMN_NAMES)
 
     with open(filename, 'w') as output:
         output.write('\n'.join(trx_strs))
@@ -170,16 +257,50 @@ def build_utiliy_matrix(sites : list, sites_by_user : dict):
             # correlation with user interaction.  Shifted +1 to remove negative values
             u_matrix.at[user,site] = math.log2(1 + count)
 
-    print(u_matrix)
+    # print(u_matrix)
     return u_matrix
 
+# def read_utiliy_matrix(path='ratings.csv'):
+#     sites = read_sites_file()
 
+#     with open(path, 'r') as file:
+#         lines = file.readlines()
+
+#     u_matrix = pd.DataFrame(columns=sites)
+#     for l in lines():
+
+
+def write_utility_matrix(u_matrix : pd.DataFrame, path='ratings.csv'):
+    users = u_matrix.index
+    sites = u_matrix.columns
+    ratings = []
+    for u in range(len(users)):
+        for i in range(len(sites)):
+            r = u_matrix.iat[u,i]
+            if not np.isnan(r):
+                ratings.append('{},{},{}'.format(u, i,r))
+
+    print(ratings)
+    with open(path, 'w') as output:
+        output.write('\n'.join(ratings))
 
 def main():
-    trxs = read_trx_file()
-    sites = read_sites_file()
-    sites_by_user = get_trx_count_per_sites(trxs)
-    build_utiliy_matrix(sites, sites_by_user)
+    ## Used to create a utility matrix and write out a ratings list
+    # trxs = read_trx_file()
+    # sites = read_sites_file()
+    # sites_by_user = get_trx_count_per_sites(trxs)
+    # u_matrix = build_utiliy_matrix(sites, sites_by_user)
+    # write_utility_matrix(u_matrix)
+
+    # create transactions
+    items, sites = read_item_data()
+    items_by_site = get_items_by_sites(items, sites)
+    trxs, site_ratios = create_transactions(10000, items_by_site)
+    breakpoint()
+    write_trxs(trxs)
+
+
+
 
 
 if __name__ == "__main__":
