@@ -16,7 +16,19 @@ from sklearn.metrics import accuracy_score
 
 # TODO find a way to use categorical data instead of treating it like text data
 
+
 def main():
+    server = Server()
+    cats = {}
+    input_categories, output_categories = Select_Training_Data_From_DB()
+    cats["input_categories"] = input_categories
+    cats["output_categories"] = output_categories
+    cat_file = open("categories.json", "w+")
+    json.dump(cats, cat_file)
+    del server
+
+
+def test():
     svm = LinearSVC(random_state=0, max_iter=10000, C=.4)
     clf = CalibratedClassifierCV(svm)
     vect = CountVectorizer(ngram_range=(1,2))
@@ -91,7 +103,7 @@ class Server:
          #new session input & output_category data that only has the primary category the user selected
         self.connect()
 
-        sql = "Select input_category, output_category From ft_ml_categories Where output_category is not null"
+        sql = "Select input_category, output_category From ft_ml_categories Where output_category is not null limit 10000"
 
         self.mycursor.execute(sql,)
         returned_items = list(self.mycursor.fetchall())
